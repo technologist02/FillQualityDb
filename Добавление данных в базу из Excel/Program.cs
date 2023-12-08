@@ -49,11 +49,11 @@ namespace FillQualityDb
             db.Extruders.AddRange(extruders);
             db.SaveChanges();
         }
-        static void Main(string[] args)
+        static async void Main(string[] args)
         {
             //FillDbImportantData();
 
-            var path = "Data.xlsx";
+            var path = "..\\..\\..\\Data.xlsx";
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             using var data = new ExcelPackage(path);
             var sheet = data.Workbook.Worksheets["Нормы по ТУ"];
@@ -63,7 +63,13 @@ namespace FillQualityDb
             var standarts = ReadExcel.GetStandartsQualityFromExcel(sheet);
             var orders = CreateOrders.GetOrdersFromExcel(sheet2);
 
-            //ReadExcel.AddFilmsToDatabase(films);
+            var task = new Task(() => ReadExcel.AddFilmsToDatabase(films));
+            await task;
+            var task2 = new Task(() => ReadExcel.AddStandartQualityToDatabase(standarts));
+            await Task.WhenAll(task2);
+            var task3 = new Task(() => CreateOrders.AddOrdersToDatabase(orders));
+            await Task.WhenAll(task3);
+                //.ContinueWith(new Task(() => ReadExcel.AddStandartQualityToDatabase(standarts))); ;
             //Не добавляет данные за раз вместе с пленками
             ReadExcel.AddStandartQualityToDatabase(standarts);
             //Не добавляет данные за раз вместе с пленками. Перезапускаю раскомментируя разные куски кода
