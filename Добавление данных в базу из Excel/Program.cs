@@ -1,8 +1,8 @@
 ﻿using OfficeOpenXml;
 using FillQualityDb.ExcelServices;
-using Добавление_данных_в_базу_из_Excel.ExcelServices;
 using Добавление_данных_в_базу_из_Excel.Data;
 using Добавление_данных_в_базу_из_Excel.Models;
+using Добавление_данных_в_базу_из_Excel.DbMethods;
 
 namespace FillQualityDb
 {
@@ -49,7 +49,7 @@ namespace FillQualityDb
             db.Extruders.AddRange(extruders);
             db.SaveChanges();
         }
-        static async void Main(string[] args)
+        static void Main(string[] args)
         {
             //FillDbImportantData();
 
@@ -60,20 +60,24 @@ namespace FillQualityDb
             var sheet2 = data.Workbook.Worksheets["Данные"];
             
             var films = ReadExcel.GetFilmsFromExcel(sheet);
-            var standarts = ReadExcel.GetStandartsQualityFromExcel(sheet);
-            var orders = CreateOrders.GetOrdersFromExcel(sheet2);
-
-            var task = new Task(() => ReadExcel.AddFilmsToDatabase(films));
-            await task;
-            var task2 = new Task(() => ReadExcel.AddStandartQualityToDatabase(standarts));
-            await Task.WhenAll(task2);
-            var task3 = new Task(() => CreateOrders.AddOrdersToDatabase(orders));
-            await Task.WhenAll(task3);
-                //.ContinueWith(new Task(() => ReadExcel.AddStandartQualityToDatabase(standarts))); ;
-            //Не добавляет данные за раз вместе с пленками
-            ReadExcel.AddStandartQualityToDatabase(standarts);
-            //Не добавляет данные за раз вместе с пленками. Перезапускаю раскомментируя разные куски кода
-            //CreateOrders.AddOrdersToDatabase(orders);
+            var a = DbMethods.AddFilmsToDatabase(films);
+            a.Wait();
+            List<StandartQualityFilm> standarts;
+            List<OrdersQuality> orders;
+            var task = Task.Run(() => ReadExcel.GetStandartsQualityFromExcelAsync(sheet));
+            var t2 = task.ContinueWith(task =>
+            {
+                standarts = task.Result;
+                DbMethods.AddStandartQualityToDatabase(standarts);
+                return ReadExcel.GetOrdersFromExcelAsync(sheet2);
+            });
+            t2.Wait();
+            var t3 = t2.ContinueWith(task => {
+                orders = task.Result.Result;
+                DbMethods.AddOrdersToDatabase(orders);
+                }
+            );
+            t3.Wait();
             Console.WriteLine("Hello, World!");
         }
     }
