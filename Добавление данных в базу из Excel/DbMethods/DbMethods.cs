@@ -11,14 +11,6 @@ namespace Добавление_данных_в_базу_из_Excel.DbMethods
 {
     internal class DbMethods
     {
-        public async static Task AddRangeEntitiesAsync<T>(List<T> entities)
-        {
-            
-            using var db = new QualityV3Context();
-            await db.AddRangeAsync(entities);
-            await db.SaveChangesAsync();
-        }
-        
         public async static Task AddOrdersToDatabase(List<OrdersQuality> orders)
         {
             using var db = new QualityV3Context();
