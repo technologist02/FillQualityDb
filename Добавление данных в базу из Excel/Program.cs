@@ -8,7 +8,6 @@ namespace FillQualityDb
 {
     internal class Program
     {
-        
         static void FillDbImportantData()
         {
             using var db = new QualityV3Context();
@@ -60,24 +59,26 @@ namespace FillQualityDb
             var sheet2 = data.Workbook.Worksheets["Данные"];
             
             var films = ReadExcel.GetFilmsFromExcel(sheet);
-            var a = DbMethods.AddFilmsToDatabase(films);
-            a.Wait();
+            var addFilmTask = DbMethods.AddFilmsToDatabase(films);
+            addFilmTask.Wait();
             List<StandartQualityFilm> standarts;
             List<OrdersQuality> orders;
             var task = Task.Run(() => ReadExcel.GetStandartsQualityFromExcelAsync(sheet));
             var t2 = task.ContinueWith(task =>
             {
                 standarts = task.Result;
-                DbMethods.AddStandartQualityToDatabase(standarts);
+                DbMethods.AddStandartQualityToDatabase(standarts).Wait();
                 return ReadExcel.GetOrdersFromExcelAsync(sheet2);
             });
             t2.Wait();
-            var t3 = t2.ContinueWith(task => {
+            var t3 = t2.ContinueWith(task =>
+            {
                 orders = task.Result.Result;
-                DbMethods.AddOrdersToDatabase(orders);
-                }
+                DbMethods.AddOrdersToDatabase(orders).Wait();
+            }
             );
             t3.Wait();
+
             Console.WriteLine("Hello, World!");
         }
     }
